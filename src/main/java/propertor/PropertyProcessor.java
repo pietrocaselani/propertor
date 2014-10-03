@@ -11,8 +11,11 @@ import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
+import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCPrimitiveTypeTree;
 import com.sun.tools.javac.tree.JCTree.JCReturn;
+import com.sun.tools.javac.tree.JCTree.JCStatement;
+import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
@@ -85,7 +88,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		long setterFlags;
 
-		switch (propertyModel.getPropertyAnnotation().getter()) {
+		switch (propertyModel.getPropertyAnnotation().setter()) {
 			case PUBLIC:
 				setterFlags = Flags.PUBLIC;
 				break;
@@ -101,7 +104,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		setterFlags = setterFlags | Flags.FINAL;
 
-		final JCTree.JCModifiers modifiers = mTreeMaker.Modifiers(setterFlags);
+		final JCModifiers modifiers = mTreeMaker.Modifiers(setterFlags);
 
 		final JCTree fieldType = propertyModel.getFieldDecl().getType();
 
@@ -124,11 +127,11 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final JCExpressionStatement exec = mTreeMaker.Exec(assign);
 
-		final JCBlock setterBody = mTreeMaker.Block(0, List.<JCTree.JCStatement>nil());
+		final JCBlock setterBody = mTreeMaker.Block(0, List.<JCStatement>nil());
 
 		setterBody.stats = setterBody.stats.append(exec);
 
-		final JCMethodDecl setter = mTreeMaker.MethodDef(modifiers, methodName, returnExpression, List.<JCTree.JCTypeParameter>nil(),
+		final JCMethodDecl setter = mTreeMaker.MethodDef(modifiers, methodName, returnExpression, List.<JCTypeParameter>nil(),
 				List.of(paramDecl), List.<JCExpression>nil(), setterBody, null);
 
 		classTree.defs = classTree.defs.append(setter);
@@ -168,7 +171,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		getterFlags = getterFlags | Flags.FINAL;
 
-		final JCBlock getterBody = mTreeMaker.Block(0, List.<JCTree.JCStatement>nil());
+		final JCBlock getterBody = mTreeMaker.Block(0, List.<JCStatement>nil());
 
 		final JCExpression expression = mTreeMaker.Ident(propertyModel.getFieldDecl());
 
@@ -176,7 +179,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		getterBody.stats = getterBody.stats.append(returnStmt);
 
-		final JCTree.JCModifiers modifiers = mTreeMaker.Modifiers(getterFlags);
+		final JCModifiers modifiers = mTreeMaker.Modifiers(getterFlags);
 
 		final JCTree fieldType = propertyModel.getFieldDecl().getType();
 		final JCTree returnType = fieldType instanceof JCPrimitiveTypeTree ?
@@ -184,7 +187,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final JCExpression returnExpression = mTreeMaker.Ident(getName(returnType.toString()));
 
-		final JCMethodDecl getter = mTreeMaker.MethodDef(modifiers, methodName, returnExpression, List.<JCTree.JCTypeParameter>nil(),
+		final JCMethodDecl getter = mTreeMaker.MethodDef(modifiers, methodName, returnExpression, List.<JCTypeParameter>nil(),
 				List.<JCVariableDecl>nil(), List.<JCExpression>nil(), getterBody, null);
 
 		classTree.defs = classTree.defs.append(getter);
