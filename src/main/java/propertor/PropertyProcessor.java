@@ -108,15 +108,21 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final JCTree fieldType = propertyModel.getFieldDecl().getType();
 
-		final JCTree parameterType = fieldType instanceof JCPrimitiveTypeTree ?
-				wrapPrimitive((JCPrimitiveTypeTree) fieldType) : fieldType;
+		final JCExpression parameterType;
+
+		if (fieldType instanceof JCPrimitiveTypeTree) {
+			JCPrimitiveTypeTree primitiveTypeTree = (JCPrimitiveTypeTree) fieldType;
+			parameterType = mTreeMaker.TypeIdent(primitiveTypeTree.typetag);
+		} else {
+			parameterType = (JCExpression) fieldType;
+		}
 
 		final JCExpression returnExpression = mTreeMaker.TypeIdent(VOID);
 
 		final JCVariableDecl paramDecl = mTreeMaker.VarDef(
 				mTreeMaker.Modifiers(Flags.PARAMETER),
 				getName(propertyModel.getPropertyName().substring(0, 1).toLowerCase() + propertyModel.getPropertyName().substring(1)),
-				mTreeMaker.Ident(getName(parameterType.toString())),
+				parameterType,
 				null);
 
 		final JCIdent paramExpression = mTreeMaker.Ident(paramDecl.name);
@@ -182,12 +188,19 @@ public class PropertyProcessor extends AbstractProcessor {
 		final JCModifiers modifiers = mTreeMaker.Modifiers(getterFlags);
 
 		final JCTree fieldType = propertyModel.getFieldDecl().getType();
-		final JCTree returnType = fieldType instanceof JCPrimitiveTypeTree ?
-				wrapPrimitive((JCPrimitiveTypeTree) fieldType) : fieldType;
 
-		final JCExpression returnExpression = mTreeMaker.Ident(getName(returnType.toString()));
+		final JCExpression returnType;
 
-		final JCMethodDecl getter = mTreeMaker.MethodDef(modifiers, methodName, returnExpression, List.<JCTypeParameter>nil(),
+		if (fieldType instanceof JCPrimitiveTypeTree) {
+			JCPrimitiveTypeTree primitiveTypeTree = (JCPrimitiveTypeTree) fieldType;
+			returnType = mTreeMaker.TypeIdent(primitiveTypeTree.typetag);
+		} else {
+			returnType = (JCExpression) fieldType;
+		}
+
+//		final JCExpression returnExpression = mTreeMaker.Ident(getName(returnType.toString()));
+
+		final JCMethodDecl getter = mTreeMaker.MethodDef(modifiers, methodName, returnType, List.<JCTypeParameter>nil(),
 				List.<JCVariableDecl>nil(), List.<JCExpression>nil(), getterBody, null);
 
 		classTree.defs = classTree.defs.append(getter);
