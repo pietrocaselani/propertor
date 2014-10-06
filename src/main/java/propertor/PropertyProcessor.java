@@ -34,6 +34,9 @@ import java.util.Set;
 
 import static com.sun.tools.javac.code.TypeTags.VOID;
 import static com.sun.tools.javac.util.Name.fromString;
+import static propertor.Visibility.PRIVATE;
+import static propertor.Visibility.PROTECTED;
+import static propertor.Visibility.PUBLIC;
 
 /**
  * Created by Pietro Caselani
@@ -77,45 +80,15 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final Name methodName = getName(propertyModel.getSetterName());
 
-		for (final JCTree def : classTree.defs) {
-			if (def instanceof JCMethodDecl) {
-				JCMethodDecl methodDecl = (JCMethodDecl) def;
-				if (methodDecl.name.equals(methodName)) {
-					return;
-				}
-			}
-		}
+		if (containsMethod(classTree, methodName)) return;
 
-		long setterFlags;
-
-		switch (propertyModel.getPropertyAnnotation().setter()) {
-			case PUBLIC:
-				setterFlags = Flags.PUBLIC;
-				break;
-			case PROTECTED:
-				setterFlags = Flags.PROTECTED;
-				break;
-			case PRIVATE:
-				setterFlags = Flags.PRIVATE;
-				break;
-			default:
-				setterFlags = 0;
-		}
-
-		setterFlags = setterFlags | Flags.FINAL;
+		final long setterFlags = getMethodFlags(propertyModel.getPropertyAnnotation().setter());
 
 		final JCModifiers modifiers = mTreeMaker.Modifiers(setterFlags);
 
 		final JCTree fieldType = propertyModel.getFieldDecl().getType();
 
-		final JCExpression parameterType;
-
-		if (fieldType instanceof JCPrimitiveTypeTree) {
-			JCPrimitiveTypeTree primitiveTypeTree = (JCPrimitiveTypeTree) fieldType;
-			parameterType = mTreeMaker.TypeIdent(primitiveTypeTree.typetag);
-		} else {
-			parameterType = (JCExpression) fieldType;
-		}
+		final JCExpression parameterType = wrapPrimitive(fieldType);
 
 		final JCExpression returnExpression = mTreeMaker.TypeIdent(VOID);
 
@@ -150,32 +123,9 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final Name methodName = getName(propertyModel.getGetterName());
 
-		for (final JCTree def : classTree.defs) {
-			if (def instanceof JCMethodDecl) {
-				JCMethodDecl methodDecl = (JCMethodDecl) def;
-				if (methodDecl.name.equals(methodName)) {
-					return;
-				}
-			}
-		}
+		if (containsMethod(classTree, methodName)) return;
 
-		long getterFlags;
-
-		switch (propertyModel.getPropertyAnnotation().getter()) {
-			case PUBLIC:
-				getterFlags = Flags.PUBLIC;
-				break;
-			case PROTECTED:
-				getterFlags = Flags.PROTECTED;
-				break;
-			case PRIVATE:
-				getterFlags = Flags.PRIVATE;
-				break;
-			default:
-				getterFlags = 0;
-		}
-
-		getterFlags = getterFlags | Flags.FINAL;
+		final long getterFlags = getMethodFlags(propertyModel.getPropertyAnnotation().getter());
 
 		final JCBlock getterBody = mTreeMaker.Block(0, List.<JCStatement>nil());
 
@@ -189,16 +139,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final JCTree fieldType = propertyModel.getFieldDecl().getType();
 
-		final JCExpression returnType;
-
-		if (fieldType instanceof JCPrimitiveTypeTree) {
-			JCPrimitiveTypeTree primitiveTypeTree = (JCPrimitiveTypeTree) fieldType;
-			returnType = mTreeMaker.TypeIdent(primitiveTypeTree.typetag);
-		} else {
-			returnType = (JCExpression) fieldType;
-		}
-
-//		final JCExpression returnExpression = mTreeMaker.Ident(getName(returnType.toString()));
+		final JCExpression returnType = wrapPrimitive(fieldType);
 
 		final JCMethodDecl getter = mTreeMaker.MethodDef(modifiers, methodName, returnType, List.<JCTypeParameter>nil(),
 				List.<JCVariableDecl>nil(), List.<JCExpression>nil(), getterBody, null);
@@ -208,6 +149,37 @@ public class PropertyProcessor extends AbstractProcessor {
 	//endregion
 
 	//region Helpers
+	private JCExpression wrapPrimitive(JCTree tree) {
+		return tree instanceof JCPrimitiveTypeTree ? mTreeMaker.TypeIdent(((JCPrimitiveTypeTree) tree).typetag) : (JCExpression) tree;
+	}
+
+	private long getMethodFlags(Visibility visibility) {
+		final long flags;
+		if (visibility == PUBLIC) {
+			flags = Flags.PUBLIC;
+		} else if (visibility == PROTECTED) {
+			flags = Flags.PROTECTED;
+		} else if (visibility == PRIVATE) {
+			flags = Flags.PRIVATE;
+		} else {
+			flags = 0;
+		}
+
+		return flags;
+	}
+
+	private boolean containsMethod(JCClassDecl classDecl, Name methodName) {
+		for (final JCTree def : classDecl.defs) {
+			if (def instanceof JCMethodDecl) {
+				JCMethodDecl methodDecl = (JCMethodDecl) def;
+				if (methodDecl.name.equals(methodName)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	private ArrayList<PropertyModel> parsePropertyAnnotations(RoundEnvironment env) {
 		final Set<? extends Element> propertyElements = env.getElementsAnnotatedWith(Property.class);
 
@@ -220,49 +192,8 @@ public class PropertyProcessor extends AbstractProcessor {
 		return propertyModels;
 	}
 
-	private JCExpression generateDotExpression(String... strings) {
-		if (strings == null || strings.length == 0) return null;
-
-		String arg1 = strings[0];
-
-		JCExpression expression = mTreeMaker.Ident(getName(arg1));
-
-		for (int i = 1; i < strings.length; i++) {
-			expression = mTreeMaker.Select(expression, getName(strings[i]));
-		}
-
-		return expression;
-	}
-
 	private Name getName(String s) {
 		return fromString(Table.instance(((JavacProcessingEnvironment) processingEnv).getContext()), s);
-	}
-
-	private JCExpression wrapPrimitive(JCPrimitiveTypeTree primitiveTypeTree) {
-		String primitiveTypeName = primitiveTypeTree.type.tsym.getQualifiedName().toString();
-		String wrapperName;
-
-		if (primitiveTypeName.equalsIgnoreCase("boolean")) {
-			wrapperName = "Boolean";
-		} else if (primitiveTypeName.equalsIgnoreCase("byte")) {
-			wrapperName = "Byte";
-		} else if (primitiveTypeName.equalsIgnoreCase("char")) {
-			wrapperName = "Character";
-		} else if (primitiveTypeName.equalsIgnoreCase("double")) {
-			wrapperName = "Double";
-		} else if (primitiveTypeName.equalsIgnoreCase("float")) {
-			wrapperName = "Float";
-		} else if (primitiveTypeName.equalsIgnoreCase("int")) {
-			wrapperName = "Integer";
-		} else if (primitiveTypeName.equalsIgnoreCase("long")) {
-			wrapperName = "Long";
-		} else if (primitiveTypeName.equalsIgnoreCase("void")) {
-			wrapperName = "Void";
-		} else {
-			throw new IllegalArgumentException("Could not find wrapper for type " + primitiveTypeName);
-		}
-
-		return generateDotExpression(wrapperName);
 	}
 	//endregion
 }

@@ -5,6 +5,7 @@ import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -16,8 +17,6 @@ import javax.lang.model.util.Types;
  * Propertor
  */
 final class PropertyModel {
-	private static TypeMirror sBooleanType;
-	private static TypeMirror sBooleanPrimitiveType;
 	private ProcessingEnvironment mEnvironment;
 	private Element mFieldElement, mClassElement;
 	private Property mProperty;
@@ -43,18 +42,14 @@ final class PropertyModel {
 		final Elements elementUtils = mEnvironment.getElementUtils();
 		final Types typeUtils = mEnvironment.getTypeUtils();
 
-		if (sBooleanType == null) {
-			sBooleanType = elementUtils.getTypeElement("java.lang.Boolean").asType();
-		}
+		final TypeMirror booleanType = elementUtils.getTypeElement("java.lang.Boolean").asType();
 
-		if (sBooleanPrimitiveType == null) {
-			sBooleanPrimitiveType = typeUtils.getPrimitiveType(TypeKind.BOOLEAN);
-		}
+		final PrimitiveType booleanPrimitiveType = typeUtils.getPrimitiveType(TypeKind.BOOLEAN);
 
 		final TypeMirror elementType = fieldElement.asType();
 
-		final String getterPrefix = typeUtils.isSameType(elementType, sBooleanPrimitiveType) ||
-				typeUtils.isSameType(elementType, sBooleanType) ? "is" : "get";
+		final String getterPrefix = typeUtils.isSameType(elementType, booleanPrimitiveType) ||
+				typeUtils.isSameType(elementType, booleanType) ? "is" : "get";
 
 		mFieldName = fieldElement.getSimpleName().toString();
 		String propertyName = mFieldName.substring(1);
