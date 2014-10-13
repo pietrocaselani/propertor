@@ -6,5 +6,5 @@ package propertor;
  * Propertor
  */
 public enum Visibility {
-	PUBLIC, PACKAGE, PROTECTED, PRIVATE
+	PUBLIC, PACKAGE, PROTECTED, PRIVATE, NONE
 }

@@ -34,6 +34,7 @@ import java.util.Set;
 
 import static com.sun.tools.javac.code.TypeTags.VOID;
 import static com.sun.tools.javac.util.Name.fromString;
+import static propertor.Visibility.NONE;
 import static propertor.Visibility.PRIVATE;
 import static propertor.Visibility.PROTECTED;
 import static propertor.Visibility.PUBLIC;
@@ -80,7 +81,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final Name methodName = getName(propertyModel.getSetterName());
 
-		if (containsMethod(classTree, methodName)) return;
+		if (containsMethod(classTree, methodName) || propertyModel.getPropertyAnnotation().setter() == NONE) return;
 
 		final long setterFlags = getMethodFlags(propertyModel.getPropertyAnnotation().setter());
 
@@ -123,7 +124,7 @@ public class PropertyProcessor extends AbstractProcessor {
 
 		final Name methodName = getName(propertyModel.getGetterName());
 
-		if (containsMethod(classTree, methodName)) return;
+		if (containsMethod(classTree, methodName) || propertyModel.getPropertyAnnotation().getter() == NONE) return;
 
 		final long getterFlags = getMethodFlags(propertyModel.getPropertyAnnotation().getter());
 
